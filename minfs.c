@@ -8,8 +8,7 @@
 
 static int v = 0;     // default: not verbose
 static int part = -1; // default: no partition selection
-static int sub = -1;  // default; no subpartition selection
-
+static int sub = -1;  // default: no subpartition selection
 
 void print_help(char* cmd) {
 	char* usage_str;
@@ -71,7 +70,5 @@ void ingest_opt(int argc, char *argv[]) {
       break;
     }
   }
-
-	printf("v=%d part=%d sub=%d", v, part, sub);
 }
 
