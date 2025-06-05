@@ -3,8 +3,13 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#define SECTOR_SIZE 512 // size of a sector
+#define PT_OFFSET 0x1BE // partition table offset within boot block
+#define SB_OFFSET 1024 // byte offset for superblock
 #define PT_OFFSET 0x1BE // partition table offset within boot block
 #define MINIX_TYPE 0x81 // partition type for minix
+#define SIGN_P1 510 // 1st signature byte to check
+#define SIGN_P2 511 // 2nd signature byte to check
 #define BOOT_510 0x55		// byte 510 of boot sector with valid pte
 #define BOOT_511 0xAA		// byte 511 of boot sector with valid pte
 #define MINIX_MAGIC 0x4D5A // Minix magic number
@@ -12,6 +17,7 @@
 #define INODE_S 64 // Size of inode 
 #define DIR_ENTRY_S 64 // Size of directory entry
 #define DIRECT_ZONES 7 // Number of direct zones in an inode
+#define PARTITION_COUNT 4 // Number of partitions per partition table
 
 // File type masks for inodes
 #define I_TYPE_MASK 0170000
@@ -77,7 +83,7 @@ typedef struct __attribute__ ((packed)) dir_entry {
 	unsigned char name[60]; // NOTE: if strnlen(name) == 60, the string has no null terminator.
 } dir_entry;
 
-void ingest_opt(int argc, char* argv[]);
+int ingest_opt(int argc, char* argv[]);
 void print_help(char*);
 
 // Client exposed: find a file given an image file pointer and a path. Returns the inode of that file if successful.
@@ -86,7 +92,7 @@ inode find_file(FILE* img_fp, char* path);
 
 // Given a sector number, a partition number, return a partition table entry. Sector number corresponds to beginning of any partition.
 // then minls and minget can get a partition table entry and run this method again with sector number=lfirst if a subpartition was given
-pte locate_pte(FILE* img_fp, uint8_t start_sec, uint8_t partition_num);
+pte locate_pte(FILE* img_fp, uint8_t start_sec, uint8_t part_num);
 
 // given a sector number, return the superblock of a partition starting at that sector block
 // with the superblock, you can find the root inode which (should) be a directory
