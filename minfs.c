@@ -17,114 +17,33 @@ static int part = 0; // default: no partition selection
 static int sub = -1; // default: no subpartition selection
 
 /*
- * print_help - prints a usage help message and exits
- *
- * params:
- * char* cmd - command from which help message is printed from (either minls or
- * minget)
- * */
-void print_help(char *cmd) {
-  char *usage_str;
-  if (!strncmp(cmd, "./minls", 8)) {
-    usage_str =
-        "usage: minls [ -v ] [ -p num [ -s num ] ] imagefile [ path ]\n";
-  } else if (!strncmp(cmd, "./minget", 9)) {
-    usage_str = "usage: minget [ -v ] [ -p num [ -s num ] ] imagefile srcpath "
-                "[ dstpath ]\n";
-  } else {
-    fprintf(stderr,
-            "This utility is only usable by minls and minget currently.\n");
-    return;
-  }
-
-  fprintf(stderr, "%s", usage_str);
-  fprintf(stderr, "Options:\n");
-  fprintf(stderr,
-          "-p part\t--- select partition for filesystem (default: none)\n");
-  fprintf(stderr,
-          "-s sub\t--- select subpartition for filesystem (default: none)\n");
-  fprintf(stderr, "-h help\t--- print usage information and exit\n");
-  fprintf(stderr, "-v part\t--- increase verbosity level\n");
-  exit(0);
-}
-
-/*
- * ingest_opt - ingests arguments and sets internal static values
- *
- * params:
- * int argc - argument count
- * char *argv[] - array of argument strings
- *
- * return:
- * number of options read
- * */
-int ingest_opt(int argc, char *argv[]) {
-  int opt_count = 0;
-  int opt;
-  char *optstring = "hvp:s:";
-  while ((opt = getopt(argc, argv, optstring)) != -1) {
-    switch (opt) {
-    case 'h':
-      print_help(argv[0]);
-      break;
-    case 'v':
-      v = 1;
-      break;
-    case 'p':
-      if (strncmp(optarg, "?", 1)) {
-        // read optarg into int
-        char *end;
-        long p_val = strtol(optarg, &end, 10);
-        if (!strcmp(end, optarg)) {
-          print_help(argv[0]);
-        } else {
-          part = (int)p_val;
-          if (part < 0 || part > 3) {
-            fprintf(stderr, "Minix only supports partitions 0 through 3.\n");
-            exit(1);
-          }
-        }
-      }
-      break;
-    case 's':
-      if (part == -1) {
-        // Partition must be selected to select a subpartition
-        print_help(argv[0]);
-      } else if (strncmp(optarg, "?", 1)) {
-        // read optarg into int
-        char *end;
-        long s_val = strtol(optarg, &end, 10);
-        if (!strcmp(end, optarg)) {
-          print_help(argv[0]);
-        } else {
-          sub = (int)s_val;
-          if (sub < 0 || sub > 3) {
-            fprintf(stderr,
-                    "Minix only supports sub-partitions 0 through 3.\n");
-            exit(1);
-          }
-        }
-      }
-      break;
-    }
-  }
-  return optind;
-}
-
-/*
  * find_file - locates an inode within an image
  *
  * params:
  * FILE *img_fp - location of image start. file must be open for reading binary
- * "rb" uint8_t start_sec - image starting sector (0 if searching for a
- * subpartition)
+ * int partition - partition selection
+ * int subpartition - subpartition selection
+ * int v_flag - verbose flag
+ *
  * */
-inode find_file(FILE *img_fp, char *path) {
+inode find_file(FILE *img_fp, char *path, int partition, int subpartition,
+                int v_flag) {
   pte partition_pte;
   superblock sb;
   inode root;
   long ret;
   char *filename;
+
+  // Set internal flags
+  part = partition;
+  sub = subpartition;
+  v = v_flag;
+
+	if (v) {
+		fprintf(stderr, "verbose: %d\n", v);
+		fprintf(stderr, "partition: %d\n", part);
+		fprintf(stderr, "subpartition: %d\n", subpartition);
+	}
 
   // Locate page table entry for partition
   partition_pte = locate_pte(img_fp, 0, part);
@@ -134,6 +53,7 @@ inode find_file(FILE *img_fp, char *path) {
     partition_pte = locate_pte(img_fp, partition_pte.lFirst, sub);
   }
 
+  // Fetches the superblock information
   sb = locate_sb(img_fp, partition_pte.lFirst);
 
   // Allocate inode table data structure
@@ -255,8 +175,7 @@ pte locate_pte(FILE *img_fp, uint8_t start_sector, uint8_t part_num) {
   }
 
   if (pte_table[part_num].type != MINIX_TYPE) {
-    fprintf(stderr, stderr,
-            "This doesn't look like a minix partition. (wrong type)\n");
+    fprintf(stderr, "This doesn't look like a minix partition. (wrong type)\n");
     fclose(img_fp);
     exit(1);
   }
@@ -292,7 +211,7 @@ superblock locate_sb(FILE *img_fp, uint8_t start_sector) {
 
   ret = fseek(img_fp, (start_sector * SECTOR_SIZE) + SB_OFFSET, SEEK_SET);
   if (ret != 0) {
-    fprintf(stderr, stderr, "Error on file seek.");
+    fprintf(stderr, "Error on file seek.");
     exit(1);
   }
 
@@ -305,7 +224,7 @@ superblock locate_sb(FILE *img_fp, uint8_t start_sector) {
 
   // Verify the magic number
   if (sb.magic != MINIX_MAGIC) {
-    fprintf(stderr, stderr, "This doesn't look like a Minix filesystem.\n");
+    fprintf(stderr, "This doesn't look like a Minix filesystem.\n");
     fclose(img_fp);
     exit(1);
   }
@@ -345,7 +264,7 @@ superblock locate_sb(FILE *img_fp, uint8_t start_sector) {
 uint32_t search_inode(FILE *img_fp, inode start, char *filename,
                       uint32_t zone_size, uint32_t lFirst) {
   long ret;
-	int i;
+  int i;
 
   // Search all zones for a directory entry with a matching filename
 

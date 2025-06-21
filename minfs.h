@@ -20,7 +20,7 @@
 #define PARTITION_COUNT 4          // Number of partitions per partition table
 
 // Limits defined by Minix
-#define MAX_PATH_LEN 1024
+#define MAX_PATH_LEN 255
 #define MAX_FILE_NAME_LEN 60
 
 // File type masks for inodes
@@ -88,8 +88,6 @@ typedef struct __attribute__((packed)) dir_entry {
                                          // string has no null terminator.
 } dir_entry;
 
-int ingest_opt(int argc, char *argv[]);
-void print_help(char *);
-inode find_file(FILE *img_fp, char *path);
+inode find_file(FILE *img_fp, char *path, int part, int sub, int v);
 
 #endif

@@ -8,10 +8,10 @@ TARGETS = minls minget
 
 all: $(TARGETS)
 
-minls: minfs.c minls.c
+minls: minfs.c minls.c util.c
 	$(CC) $(CFLAGS) -o $@ $^
 
-minget: minfs.c minget.c
+minget: minfs.c minget.c util.c
 	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
