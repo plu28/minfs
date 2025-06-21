@@ -59,6 +59,11 @@ inode find_file(FILE *img_fp, char *path, int partition, int subpartition,
   // Allocate inode table data structure
   uint8_t inode_table_size = sizeof(inode) * sb.ninodes;
   inode *inode_table = (inode *)malloc(inode_table_size);
+	if (!inode_table) {
+		fprintf(stderr, "Malloc for inode_table_size failed.");
+		fclose(img_fp);
+		exit(1);
+	}
 
   // Locate the start of the inode table
   uint8_t inode_table_offset =
